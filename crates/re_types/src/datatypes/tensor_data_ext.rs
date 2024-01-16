@@ -57,9 +57,9 @@ impl TensorData {
             }
             // In the case of YUV422, return the shape of the RGB image, not the tensor size.
             TensorBuffer::Yuv422(_) => {
-                // YUV422 encodes a color image in 2 "channels" -> 1 luma (per pixel) + 1 UV (per 2 pixels).
+                // YUV422 encodes a color image in 2 "channels" -> 1 luma (per pixel) + (1U + 1V) (per 2 pixels).
                 match shape_short {
-                    [h, w] => Some([h.size, w.size / 2, 3]),
+                    [h, w] => Some([h.size / 2, w.size, 3]),
                     _ => None,
                 }
             }

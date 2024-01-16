@@ -95,6 +95,9 @@ pub fn color_tensor_to_gpu(
             (3, TensorBuffer::Nv12(buf)) => {
                 (cast_slice_to_cow(buf.as_slice()), TextureFormat::R8Uint)
             }
+            (3, TensorBuffer::Yuv422(buf)) => {
+                (cast_slice_to_cow(buf.as_slice()), TextureFormat::R8Uint)
+            }
             // Normalize sRGB(A) textures to 0-1 range, and let the GPU premultiply alpha.
             // Why? Because premul must happen _before_ sRGB decode, so we can't
             // use a "Srgb-aware" texture like `Rgba8UnormSrgb` for RGBA.
@@ -123,6 +126,7 @@ pub fn color_tensor_to_gpu(
     let texture_format = texture_handle.format();
     let shader_decoding = match &tensor.buffer {
         &TensorBuffer::Nv12(_) => Some(ShaderDecoding::Nv12),
+        &TensorBuffer::Yuv422(_) => Some(ShaderDecoding::Yuv422),
         _ => None,
     };
     // TODO(emilk): let the user specify the color space.
@@ -142,7 +146,9 @@ pub fn color_tensor_to_gpu(
         [0.0, 1.0]
     } else if texture_format == TextureFormat::R8Snorm {
         [-1.0, 1.0]
-    } else if shader_decoding == Some(ShaderDecoding::Nv12) {
+    } else if shader_decoding == Some(ShaderDecoding::Nv12)
+        || shader_decoding == Some(ShaderDecoding::Yuv422)
+    {
         [0.0, 1.0]
     } else {
         // TODO(#2341): The range should be determined by a `DataRange` component. In absence this, heuristics apply.
@@ -553,8 +559,11 @@ fn texture_height_width_channels(tensor: &TensorData) -> anyhow::Result<[u32; 3]
         anyhow::bail!("Tensor is not an image");
     };
     height = match tensor.buffer {
-        // Correct the texture height for NV12, tensor.image_height_width_channels returns the RGB size for NV12 images. The actual texture size has dimensions (h*3/2, w, 1).
+        // Correct the texture height for NV12/Yuv422, tensor.image_height_width_channels returns the RGB size for NV12/Yuv422 images.
+        // The actual texture size has dimensions (h*3/2, w, 1).
         TensorBuffer::Nv12(_) => height * 3 / 2,
+        // The actual texture size has dimensions (h/2, w, 1).
+        TensorBuffer::Yuv422(_) => height * 2,
         _ => height,
     };
 

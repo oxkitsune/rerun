@@ -135,6 +135,18 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
             let v11 = decode_nv12(texture_uint, v11_coord);
             normalized_value = decode_color_and_filter_bilinear(coord, v00, v01, v10, v11);
         }
+    } else if rect_info.sample_type == SAMPLE_TYPE_YUV422 {
+        if tex_filter(coord) == FILTER_NEAREST {
+            // nearest
+            normalized_value = decode_color(vec4f(decode_yuv422(texture_uint, clamped_coord)));
+        } else {
+            // bilinear
+            let v00 = decode_yuv422(texture_uint, v00_coord);
+            let v01 = decode_yuv422(texture_uint, v01_coord);
+            let v10 = decode_yuv422(texture_uint, v10_coord);
+            let v11 = decode_yuv422(texture_uint, v11_coord);
+            normalized_value = decode_color_and_filter_bilinear(coord, v00, v01, v10, v11);
+        }
     }
     else {
         return ERROR_RGBA; // unknown sample type
