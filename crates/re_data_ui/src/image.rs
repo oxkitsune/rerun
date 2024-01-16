@@ -376,6 +376,11 @@ pub fn tensor_summary_ui_grid_contents(
             ui.label("NV12");
             ui.end_row();
         }
+        TensorBuffer::Yuv422(_) => {
+            re_ui.grid_left_hand_label(ui, "Encoding");
+            ui.label("YUV422");
+            ui.end_row();
+        }
     }
 
     let TensorStats {

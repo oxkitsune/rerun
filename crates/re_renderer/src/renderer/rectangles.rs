@@ -50,6 +50,7 @@ pub enum TextureFilterMin {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ShaderDecoding {
     Nv12,
+    Yuv422,
 }
 
 /// Describes a texture and how to map it to a color.

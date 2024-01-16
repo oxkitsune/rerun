@@ -127,7 +127,7 @@ pub fn color_tensor_to_gpu(
     };
     // TODO(emilk): let the user specify the color space.
     let decode_srgb = match shader_decoding {
-        Some(ShaderDecoding::Nv12) => true,
+        Some(ShaderDecoding::Nv12 | ShaderDecoding::Yuv422) => true,
         None => {
             texture_format == TextureFormat::Rgba8Unorm
                 || super::tensor_decode_srgb_gamma_heuristic(tensor_stats, tensor.dtype(), depth)?
@@ -168,6 +168,7 @@ pub fn color_tensor_to_gpu(
         }
 
         Some(ShaderDecoding::Nv12) => ColorMapper::OffRGB,
+        Some(ShaderDecoding::Yuv422) => ColorMapper::OffRGB,
     };
 
     // TODO(wumpf): There should be a way to specify whether a texture uses pre-multiplied alpha or not.
@@ -363,6 +364,9 @@ fn general_texture_creation_desc_from_tensor<'a>(
                 TensorBuffer::Nv12(_) => {
                     unreachable!("An NV12 tensor can only contain a 3 channel image.")
                 }
+                TensorBuffer::Yuv422(_) => {
+                    unreachable!("A YUV422 tensor can only contain a 3 channel image.")
+                }
             }
         }
         2 => {
@@ -387,6 +391,9 @@ fn general_texture_creation_desc_from_tensor<'a>(
                 }
                 TensorBuffer::Nv12(_) => {
                     unreachable!("An NV12 tensor can only contain a 3 channel image.")
+                }
+                TensorBuffer::Yuv422(_) => {
+                    unreachable!("A YUV422 tensor can only contain a 3 channel image.")
                 }
             }
         }
@@ -434,6 +441,9 @@ fn general_texture_creation_desc_from_tensor<'a>(
                 TensorBuffer::Nv12(buf) => {
                     (cast_slice_to_cow(buf.as_slice()), TextureFormat::R8Unorm)
                 }
+                TensorBuffer::Yuv422(buf) => {
+                    (cast_slice_to_cow(buf.as_slice()), TextureFormat::R8Unorm)
+                }
             }
         }
         4 => {
@@ -458,6 +468,9 @@ fn general_texture_creation_desc_from_tensor<'a>(
                 }
                 TensorBuffer::Nv12(_) => {
                     unreachable!("An NV12 tensor can only contain a 3 channel image.")
+                }
+                TensorBuffer::Yuv422(_) => {
+                    unreachable!("A YUV422 tensor can only contain a 3 channel image.")
                 }
             }
         }

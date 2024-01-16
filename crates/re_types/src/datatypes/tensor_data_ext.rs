@@ -55,6 +55,14 @@ impl TensorData {
                     _ => None,
                 }
             }
+            // In the case of YUV422, return the shape of the RGB image, not the tensor size.
+            TensorBuffer::Yuv422(_) => {
+                // YUV422 encodes a color image in 2 "channels" -> 1 luma (per pixel) + 1 UV (per 2 pixels).
+                match shape_short {
+                    [h, w] => Some([h.size, w.size / 2, 3]),
+                    _ => None,
+                }
+            }
             TensorBuffer::Jpeg(_)
             | TensorBuffer::U8(_)
             | TensorBuffer::U16(_)
@@ -197,6 +205,28 @@ impl TensorData {
                     }
                 }
             }
+            TensorBuffer::Yuv422(_) => {
+                {
+                    // Returns the U32 packed RGBA value of the pixel at index [y, x] if it is valid.
+                    let [y, x] = index else {
+                        return None;
+                    };
+
+                    if let Some(
+                        [TensorElement::U8(r), TensorElement::U8(g), TensorElement::U8(b)],
+                    ) = self.get_yuv422_pixel(*x, *y)
+                    {
+                        let mut rgba = 0;
+                        rgba |= (r as u32) << 24;
+                        rgba |= (g as u32) << 16;
+                        rgba |= (b as u32) << 8;
+                        rgba |= 0xff;
+                        Some(TensorElement::U32(rgba))
+                    } else {
+                        None
+                    }
+                }
+            }
         }
     }
 
@@ -220,6 +250,35 @@ impl TensorData {
                     TensorElement::U8(f64::clamp(r * 255.0, 0.0, 255.0) as u8),
                     TensorElement::U8(f64::clamp(g * 255.0, 0.0, 255.0) as u8),
                     TensorElement::U8(f64::clamp(b * 255.0, 0.0, 255.0) as u8),
+                ])
+            }
+            _ => None,
+        }
+    }
+
+    pub fn get_yuv422_pixel(&self, x: u64, y: u64) -> Option<[TensorElement; 3]> {
+        let TensorBuffer::Yuv422(buf) = &self.buffer else {
+            return None;
+        };
+
+        match self.image_height_width_channels() {
+            Some([_, w, _]) => {
+                // get the pixel at x, y in the YUV422 buffer
+                let yuv_offset = (y * w + x) * 2;
+                let _y0 = i32::from(buf[yuv_offset as usize]) - 16;
+                let u = i32::from(buf[(yuv_offset + 1) as usize]) - 128;
+                let y1 = i32::from(buf[(yuv_offset + 2) as usize]) - 16;
+                let v = i32::from(buf[(yuv_offset + 3) as usize]) - 128;
+
+                // convert to RGB
+                let r = (298 * y1 + 409 * v + 128) >> 8;
+                let g = (298 * y1 - 100 * u - 208 * v + 128) >> 8;
+                let b = (298 * y1 + 516 * u + 128) >> 8;
+
+                Some([
+                    TensorElement::U8(r.clamp(0, 255) as u8),
+                    TensorElement::U8(g.clamp(0, 255) as u8),
+                    TensorElement::U8(b.clamp(0, 255) as u8),
                 ])
             }
             _ => None,
