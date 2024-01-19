@@ -75,6 +75,8 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
         texture_dimensions = vec2f(textureDimensions(texture_uint).xy);
     } else if rect_info.sample_type == SAMPLE_TYPE_NV12 {
         texture_dimensions = vec2f(textureDimensions(texture_uint).xy);
+    } else if rect_info.sample_type == SAMPLE_TYPE_YUV422 {
+        texture_dimensions = vec2f(textureDimensions(texture_uint).xy);
     }
 
     let coord = in.texcoord * texture_dimensions;

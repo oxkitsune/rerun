@@ -59,7 +59,7 @@ impl TensorData {
             TensorBuffer::Yuv422(_) => {
                 // YUV422 encodes a color image in 2 "channels" -> 1 luma (per pixel) + (1U + 1V) (per 2 pixels).
                 match shape_short {
-                    [h, w] => Some([h.size / 2, w.size, 3]),
+                    [h, w] => Some([h.size, w.size / 2, 3]),
                     _ => None,
                 }
             }
@@ -262,23 +262,23 @@ impl TensorData {
         };
 
         match self.image_height_width_channels() {
-            Some([_, w, _]) => {
-                // get the pixel at x, y in the YUV422 buffer
+            Some([h, w, _]) => {
+                // given an x and y coordinate, get the offset into the yuv422 buffer
                 let yuv_offset = (y * w + x) * 2;
-                let _y0 = i32::from(buf[yuv_offset as usize]) - 16;
-                let u = i32::from(buf[(yuv_offset + 1) as usize]) - 128;
-                let y1 = i32::from(buf[(yuv_offset + 2) as usize]) - 16;
-                let v = i32::from(buf[(yuv_offset + 3) as usize]) - 128;
+                let y0 = buf[yuv_offset as usize] as f64;
+                let u = buf[(yuv_offset + 1) as usize] as f64;
+                let y1 = buf[(yuv_offset + 2) as usize] as f64;
+                let v = buf[(yuv_offset + 3) as usize] as f64;
 
-                // convert to RGB
-                let r = (298 * y1 + 409 * v + 128) >> 8;
-                let g = (298 * y1 - 100 * u - 208 * v + 128) >> 8;
-                let b = (298 * y1 + 516 * u + 128) >> 8;
+                // Just return the pixel at the given coordinates
+                let r = y0 + 1.402 * v;
+                let g = y0 - 0.344 * u + 0.714 * v;
+                let b = y0 + 1.772 * u;
 
                 Some([
-                    TensorElement::U8(r.clamp(0, 255) as u8),
-                    TensorElement::U8(g.clamp(0, 255) as u8),
-                    TensorElement::U8(b.clamp(0, 255) as u8),
+                    TensorElement::U8(f64::clamp(r, 0.0, 255.0) as u8),
+                    TensorElement::U8(f64::clamp(g, 0.0, 255.0) as u8),
+                    TensorElement::U8(f64::clamp(b, 0.0, 255.0) as u8),
                 ])
             }
             _ => None,

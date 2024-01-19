@@ -149,7 +149,7 @@ impl ColormappedTexture {
             }
             Some(ShaderDecoding::Yuv422) => {
                 let [width, height] = self.texture.width_height();
-                [width, height / 2]
+                [width / 2, height]
             }
             _ => self.texture.width_height(),
         }

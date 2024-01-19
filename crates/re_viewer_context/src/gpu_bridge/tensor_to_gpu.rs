@@ -555,16 +555,19 @@ fn pad_and_narrow_and_cast<T: Copy + Pod>(
 fn texture_height_width_channels(tensor: &TensorData) -> anyhow::Result<[u32; 3]> {
     use anyhow::Context as _;
 
-    let Some([mut height, width, channel]) = tensor.image_height_width_channels() else {
+    let Some([mut height, mut width, channel]) = tensor.image_height_width_channels() else {
         anyhow::bail!("Tensor is not an image");
     };
     height = match tensor.buffer {
-        // Correct the texture height for NV12/Yuv422, tensor.image_height_width_channels returns the RGB size for NV12/Yuv422 images.
+        // Correct the texture height for NV12, tensor.image_height_width_channels returns the RGB size for NV12 images.
         // The actual texture size has dimensions (h*3/2, w, 1).
         TensorBuffer::Nv12(_) => height * 3 / 2,
-        // The actual texture size has dimensions (h/2, w, 1).
-        TensorBuffer::Yuv422(_) => height * 2,
         _ => height,
+    };
+
+    width = match tensor.buffer {
+        TensorBuffer::Yuv422(_) => width * 2,
+        _ => width,
     };
 
     let [height, width] = [
